@@ -1,0 +1,25 @@
+# Prometheus 告警规则（实际部署路径 /etc/prometheus/rules.yml）
+# 校验命令：promtool check rules /etc/prometheus/rules.yml
+
+groups:
+  - name: disk_alerts
+    rules:
+      - alert: DiskSpaceLow
+        # 根分区可用率 = 可用字节 / 总字节 × 100，低于 15 即满足条件
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+
+        # for：条件满足后要持续这么久才正式报警（防止瞬时抖动误报）
+        for: 5m
+
+        labels:
+          severity: warning
+
+        annotations:
+          summary: "根分区可用空间低于 15%"
+          description: "根分区剩余空间 {{ $value }}%"
+
+# 实测验证（故障注入）：
+#   基线         df -h /  →  可用 7.0G / 61%        → Inactive（绿）
+#   fallocate 6G            可用 993M / 95%（约5%）  → Pending （黄）02:41:30
+#   等满 for: 5m                                     → Firing  （红）02:46:30
+#   删除大文件                                       → Inactive（绿）自愈

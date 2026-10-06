@@ -1,0 +1,17 @@
+; systemd 单元文件（实际部署路径 /etc/systemd/system/node_exporter.service）
+; 要点：用专用低权限账号 node_exporter 运行，不用 root
+; 生效流程：daemon-reload → enable --now → status
+
+[Unit]
+Description=Node Exporter
+After=network.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+ExecStart=/usr/local/bin/node_exporter --collector.systemd --web.listen-address=:9100
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
